@@ -1,4 +1,4 @@
-Création du fichier Dockerfile pour creation d'une image docker
+Création du fichier Dockerfile pour la création d'une image docker
 
 # --- Étape 1 : Build (Installation des dépendances) ---
 
