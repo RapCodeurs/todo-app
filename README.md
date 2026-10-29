@@ -1,75 +1,37 @@
-Création du fichier Dockerfile pour creation d'une image docker
+# Création de POSTGRESQL avec docker compose
 
-# --- Étape 1 : Build (Installation des dépendances) ---
+version: '3.8'
 
-FROM python:3.12-slim AS builder
+services:
 
-WORKDIR /app
+# Notre base de données PostgreSQL
 
-# Installer les outils nécessaires si besoin, puis compiler les dépendances
+postgres:
+image: postgres:16-alpine
+container_name: todo-postgres
+restart: always
+environment:
+POSTGRES_USER: app_user
+POSTGRES_PASSWORD: app_password
+POSTGRES_DB: todo_db
+ports: - "5432:5432"
+volumes: - postgres_data:/var/lib/postgresql/data
 
-RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -rf /var/lib/apt/lists/\*
+# Notre API FastAPI
 
-COPY requirements.txt .
+backend:
+build:
+context: .
+dockerfile: Dockerfile
+container_name: todo-backend
+restart: always
+ports: - "8000:8000"
+environment: - DATABASE_URL=postgresql://app_user:app_password@postgres:5432/todo_db
+depends_on: - postgres
 
-# Installer les dépendances dans un dossier local pour pouvoir les copier facilement
+volumes:
+postgres_data:
 
-RUN pip install --no-cache-dir --user -r requirements.txt
+# Tester l'environnement
 
-# --- Étape 2 : Image finale légère et sécurisée ---
-
-FROM python:3.12-slim
-
-WORKDIR /app
-
-# Créer un utilisateur non-root dédié pour l'application
-
-RUN useradd -u 1000 app && mkdir -p /home/app && chown -R app:app /home/app
-
-# Copier les dépendances installées depuis l'étape précédente
-
-COPY --from=builder /root/.local /home/app/.local
-
-# Copier le code de l'application
-
-COPY app/ ./app
-
-# Mettre à jour le PATH pour que Python trouve les paquets copiés
-
-ENV PATH=/home/app/.local/bin:$PATH
-
-# Basculer sur l'utilisateur non-root
-
-USER app
-
-EXPOSE 8000
-
-# Lancer uvicorn sur l'adresse 0.0.0.0 pour qu'il soit joignable depuis l'extérieur du conteneur
-
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-# Ajouter un .dockerignore
-
-    .venv
-    __pycache__
-    .pytest_cache
-    tests
-    .git
-    Dockerfile
-    .dockerignore
-
-# Tester le build en local
-
-docker build -t tasks-api
-
-# Lancer et tester le contenaire en local
-
-docker run -d -p 8000:8000 --name mon-api-tasks tasks-api
-
-# Vérifications de sécurité et de fonctionnement
-
-    1-http://localhost:8000/health --> si l'API repond
-    2-docker images tasks-api ---> poids de l'image 63 MB
-    3-docker exec mon-api-tasks id ---> si le contenaire utile l'utilisateur app(ID 1000)
-    4-docker stop mon-api-tasks
-    5-docker rm mon-api-tasks
+    docker compose up --build -d
