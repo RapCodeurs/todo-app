@@ -35,3 +35,4 @@ services:
 # Tester l'environnement
 
     docker compose up --build -d
+Création d'une API_FAST avec PYTHON
