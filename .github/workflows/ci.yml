@@ -80,3 +80,39 @@ jobs:
           tags: |
             ghcr.io/${{ env.REPO_LOWER }}:latest
             ghcr.io/${{ env.REPO_LOWER }}:${{ github.sha }}
+
+
+  deploy:
+    needs: build-and-scan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.prod.yml to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: "44.212.71.35"
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "docker-compose.prod.yml"
+          target: "~/todo-app"
+
+      - name: Deploy and Start application
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: "44.212.71.35"
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Installer docker-compose si ce n'est pas déjà fait
+            sudo apt-get update && sudo apt-get install -y docker-compose-v2
+            
+            cd ~/todo-app
+            # Renommer le fichier pour qu'il soit le fichier par défaut
+            mv docker-compose.prod.yml docker-compose.yml
+            
+            # Forcer le téléchargement de la nouvelle image et redémarrer les conteneurs
+            sudo docker compose pull
+            sudo docker compose up -d

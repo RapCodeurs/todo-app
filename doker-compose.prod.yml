@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL de production
+  postgres:
+    image: postgres:16-alpine
+    container_name: todo-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_USER: prod_user
+      POSTGRES_PASSWORD: prod_secure_password_123 # En production, on utilisera des variables secrètes
+      POSTGRES_DB: todo_prod_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+
+  # Notre API de production (Téléchargée depuis le registre GitHub)
+  backend:
+    # ⚠️ Remplacez "rapcodeurs" par votre pseudo GitHub en minuscules si besoin
+    image: ghcr.io/rapcodeurs/todo-app:latest
+    container_name: todo-backend-prod
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://prod_user:prod_secure_password_123@postgres:5432/todo_prod_db
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_prod_data:
