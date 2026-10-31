@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-postgres
+  labels:
+    app: todo-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-postgres
+  template:
+    metadata:
+      labels:
+        app: todo-postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        env:
+        - name: POSTGRES_USER
+          value: k8s_user
+        - name: POSTGRES_PASSWORD
+          value: k8s_secure_password
+        - name: POSTGRES_DB
+          value: todo_k8s_db
+        ports:
+        - containerPort: 5432
+          name: postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-postgres-service
+spec:
+  selector:
+    app: todo-postgres
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432

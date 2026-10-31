@@ -17,7 +17,7 @@ services:
 
   # Notre API de production (Téléchargée depuis le registre GitHub)
   backend:
-    # ⚠️ Remplacez "rapcodeurs" par votre pseudo GitHub en minuscules si besoin
+    # Remplacez "rapcodeurs" par votre pseudo GitHub en minuscules si besoin
     image: ghcr.io/rapcodeurs/todo-app:latest
     container_name: todo-backend-prod
     restart: always

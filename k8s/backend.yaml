@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-backend
+  labels:
+    app: todo-backend
+spec:
+  replicas: 2 # Haute disponibilité : 2 pods vont tourner en parallèle
+  selector:
+    matchLabels:
+      app: todo-backend
+  template:
+    metadata:
+      labels:
+        app: todo-backend
+    spec:
+      containers:
+      - name: backend
+        # Remplacez "rapcodeurs" par votre pseudo GitHub exact en minuscules
+        image: ghcr.io/rapcodeurs/todo-app:latest
+        imagePullPolicy: Always
+        env:
+        - name: DATABASE_URL
+          # Le nom de l'hôte correspond exactement au nom du Service postgres défini précédemment
+          value: postgresql://k8s_user:k8s_secure_password@todo-postgres-service:5432/todo_k8s_db
+        ports:
+        - containerPort: 8000
+          name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-backend-service
+spec:
+  type: NodePort # Permet d'exposer le service à l'extérieur du cluster Minikube
+  selector:
+    app: todo-backend
+  ports:
+  - protocol: TCP
+    port: 8000
+    targetPort: 8000
+    nodePort: 30080 # Port fixe accessible depuis l'IP de Minikube
