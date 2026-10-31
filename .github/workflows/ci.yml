@@ -39,6 +39,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Étape magique : on prend le nom du repo, on le passe en minuscules via Bash, et on le sauvegarde
       # Étape magique pour forcer les minuscules
       - name: Convert repository name to lowercase
         run: |
