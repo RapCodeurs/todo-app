@@ -1,38 +1,88 @@
-# Création de POSTGRESQL avec docker compose
+# Création de la pipeline CI/CD
 
-version: '3.8'
+name: CI/CD Pipeline
 
-services:
+on:
+push:
+branches: [ '**' ]
+pull_request:
+branches: [ "main" ]
 
-# Notre base de données PostgreSQL
+permissions:
+contents: read
+packages: write # Obligatoire pour pousser l'image sur GitHub Container Registry (GHCR)
 
-    postgres:
-    image: postgres:16-alpine
-    container_name: todo-postgres
-    restart: always
-    environment:
-    POSTGRES_USER: app_user
-    POSTGRES_PASSWORD: app_password
-    POSTGRES_DB: todo_db
-    ports: - "5432:5432"
-    volumes: - postgres_data:/var/lib/postgresql/data
+jobs:
+test-and-lint:
+runs-on: ubuntu-latest
+steps: - name: Checkout code
+uses: actions/checkout@v4
 
-# Notre API FastAPI
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
 
-    backend:
-    build:
-    context: .
-    dockerfile: Dockerfile
-    container_name: todo-backend
-    restart: always
-    ports: - "8000:8000"
-    environment: - DATABASE_URL=postgresql://app_user:app_password@postgres:5432/todo_db
-    depends_on: - postgres
-    
-    volumes:
-    postgres_data:
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-# Tester l'environnement
+      - name: Run tests
+        run: |
+          python -m pytest
 
-    docker compose up --build -d
-Création d'une API_FAST avec PYTHON
+build-and-scan:
+needs: test-and-lint
+runs-on: ubuntu-latest
+steps: - name: Checkout code
+uses: actions/checkout@v4
+
+      # Étape magique : on prend le nom du repo, on le passe en minuscules via Bash, et on le sauvegarde
+      - name: Convert repository name to lowercase
+        run: |
+          echo "REPO_LOWER=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image (Local context for scan)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: ghcr.io/${{ env.REPO_LOWER }}:test
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ghcr.io/${{ env.REPO_LOWER }}:test'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL'
+
+      - name: Build and Push Final Docker Image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ env.REPO_LOWER }}:latest
+            ghcr.io/${{ env.REPO_LOWER }}:${{ github.sha }}
+
+# Pouser la branche
+
+    git add .github/workflows/ci.yml
+    git commit -m "fix: resolve yaml indentation and tag closing brackets"
+    git push origin 3-pipeline_CI/CD
