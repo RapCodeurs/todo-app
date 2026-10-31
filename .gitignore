@@ -3,3 +3,12 @@
 /tests/__pycache__
 /.venv
 __init__.py
+# Ignorer le dossier de binaires de Terraform
+**/.terraform/
+
+# Ignorer les fichiers d'état locaux (qui contiennent des infos sensibles)
+*.tfstate
+*.tfstate.*
+
+# Ignorer les variables de configuration secrètes
+*.tfvars
