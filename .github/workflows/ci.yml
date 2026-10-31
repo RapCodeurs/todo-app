@@ -93,7 +93,7 @@ jobs:
       - name: Copy docker-compose.prod.yml to server
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: "44.212.71.35"
+          host: "3.86.86.234"
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "docker-compose.prod.yml"
@@ -102,7 +102,7 @@ jobs:
       - name: Deploy and Start application
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: "44.212.71.35"
+          host: "3.86.86.234"
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
