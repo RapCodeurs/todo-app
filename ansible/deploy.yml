@@ -1,0 +1,59 @@
+---
+- name: Deploy To-Do Application to AWS EC2
+  hosts: all
+  become: yes # S'exécuter en tant que root (sudo)
+  
+  tasks:
+    - name: Ensure Docker is installed
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Ensure Docker Compose is installed
+      apt:
+        name: docker-compose-v2
+        state: present
+
+    - name: Ensure Docker service is started and enabled
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Create application directory
+      file:
+        path: /home/ubuntu/todo-app
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0755'
+
+    - name: Copy docker-compose production file
+      copy:
+        src: ../docker-compose.prod.yml
+        dest: /home/ubuntu/todo-app/docker-compose.yml
+        owner: ubuntu
+        group: ubuntu
+        mode: '0644'
+
+    - name: Pull latest Docker images
+      docker_compose:
+        project_src: /home/ubuntu/todo-app
+        action: pull
+
+    - name: Start application containers
+      docker_compose:
+        project_src: /home/ubuntu/todo-app
+        state: present
+
+
+    - name: Run Ansible Playbook
+        run: |
+          # On installe l'extension docker pour ansible sur le runner GitHub
+          ansible-galaxy collection install community.docker
+          
+          # On exécute le playbook en ciblant l'IP de votre EC2
+          ansible-playbook -i "3.86.86.234," -u ubuntu --private-key ~/.ssh/id_rsa ansible/deploy.yml --ssh-common-args="-o StrictHostKeyChecking=no"
+          Utilisez le code avec précaution.
+
