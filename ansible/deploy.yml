@@ -37,12 +37,8 @@
         group: ubuntu
         mode: '0644'
 
-    - name: Pull latest Docker images
-      community.docker.docker_compose_v2:
-        project_src: /home/ubuntu/todo-app
-        action: pull
-
-    - name: Start application containers
+    - name: Pull latest images and start containers
       community.docker.docker_compose_v2:
         project_src: /home/ubuntu/todo-app
         state: present
+        pull: always
