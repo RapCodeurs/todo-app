@@ -83,7 +83,7 @@ jobs:
             ghcr.io/${{ env.REPO_LOWER }}:${{ github.sha }}
 
 
-  deploy:
+  deploy-with-ansible:
     needs: build-and-scan
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -91,29 +91,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Copy docker-compose.prod.yml to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: "3.86.86.234"
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.prod.yml"
-          target: "~/todo-app"
+      - name: Set up SSH Key file
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
 
-      - name: Deploy and Start application
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: "3.86.86.234"
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            # Installer docker-compose si ce n'est pas déjà fait
-            sudo apt-get update && sudo apt-get install -y docker-compose-v2
-            
-            cd ~/todo-app
-            # Renommer le fichier pour qu'il soit le fichier par défaut
-            mv docker-compose.prod.yml docker-compose.yml
-            
-            # Forcer le téléchargement de la nouvelle image et redémarrer les conteneurs
-            sudo docker compose pull
-            sudo docker compose up -d
+      - name: Run Ansible Playbook
+        run: |
+          # Installer la collection officielle Docker pour qu'Ansible sache gérer Docker Compose V2
+          ansible-galaxy collection install community.docker
+          
+          # Exécuter le playbook en ciblant l'IP de l'EC2 (la virgule après l'IP est obligatoire pour simuler un inventaire en ligne)
+          ansible-playbook -i "3.86.86.234," -u ubuntu --private-key ~/.ssh/id_rsa ansible/deploy.yml --ssh-common-args="-o StrictHostKeyChecking=no"
